@@ -1,0 +1,179 @@
+services:
+  # ---------------------------------------------------------------------------
+  # Project database of group17
+  # ---------------------------------------------------------------------------
+  project-db:
+    container_name: project-db
+    image: postgres:${POSTGRES_VERSION:-16.4}
+    environment:
+      POSTGRES_USER: ${PROJECT_DB_USER}
+      POSTGRES_PASSWORD: ${PROJECT_DB_PASSWORD}
+      POSTGRES_DB: ${PROJECT_DB_NAME}
+      PGUSER: ${PROJECT_DB_USER}
+      PGPASSWORD: ${PROJECT_DB_PASSWORD}
+      PGDATABASE: ${PROJECT_DB_NAME}
+    ports:
+      - "${PROJECT_DB_PORT:-5434}:5432"
+    volumes:
+      - ./pgdata_project:/var/lib/postgresql/data
+      # Run create tables script when database created (needed for raw emta data and raw procurement data)
+      - ./scripts/create_tables.sql:/docker-entrypoint-initdb.d/01_create_tables.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # dbt — lightweight container that stays running for the full session.
+  # ---------------------------------------------------------------------------
+  dbt:
+    build:
+      context: .
+      dockerfile: dbt.Dockerfile
+    container_name: dbt
+    volumes:
+      - ./dbt_project:/dbt
+    environment:
+      DBT_PROJECT_DIR: /dbt
+      DBT_PROFILES_DIR: /dbt
+    depends_on:
+      project-db:
+        condition: service_healthy
+    tty: true
+    stdin_open: true
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # Airflow metadata database
+  # ---------------------------------------------------------------------------
+  airflow-db:
+    container_name: project-airflow-db
+    image: postgres:${POSTGRES_VERSION:-16.4}
+    environment:
+      POSTGRES_USER: ${AIRFLOW_DB_USER}
+      POSTGRES_PASSWORD: ${AIRFLOW_DB_PASSWORD}
+      POSTGRES_DB: ${AIRFLOW_DB_NAME}
+      PGUSER: ${AIRFLOW_DB_USER}
+      PGPASSWORD: ${AIRFLOW_DB_PASSWORD}
+      PGDATABASE: ${AIRFLOW_DB_NAME}
+    ports:
+      - "${AIRFLOW_DB_PORT:-5435}:5432"
+    volumes:
+      - ./pgdata_airflow:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 10s
+      retries: 5
+      start_period: 20s
+    restart: always
+
+  # ---------------------------------------------------------------------------
+  # Airflow — orchestrates raw data ingestion, dbt transformations and tests
+  # dbt-core and dbt-postgres are pre-installed in airflow.Dockerfile so
+  # containers start immediately (no runtime pip install).
+  # ---------------------------------------------------------------------------
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: airflow.Dockerfile
+    container_name: project-airflow-webserver
+    command: webserver
+    user: "50000:0"
+    environment:
+      &airflow-common-env
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${AIRFLOW_DB_USER}:${AIRFLOW_DB_PASSWORD}@airflow-db:5432/${AIRFLOW_DB_NAME}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      AIRFLOW__API__AUTH_BACKENDS: "airflow.api.auth.backend.basic_auth"
+      AIRFLOW_CONN_PROJECT_DB: postgres://${PROJECT_DB_USER}:${PROJECT_DB_PASSWORD}@project-db:5432/${PROJECT_DB_NAME}
+      DBT_PROJECT_DIR: /dbt
+      DBT_PROFILES_DIR: /dbt
+    ports:
+      - "${AIRFLOW_WEB_PORT:-8080}:8080"
+    volumes:
+      &airflow-common-volumes
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./dbt_project:/dbt
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-db:
+        condition: service_healthy
+      project-db:
+        condition: service_healthy
+    restart: always
+
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: airflow.Dockerfile
+    container_name: project-airflow-scheduler
+    command: scheduler
+    user: "50000:0"
+    environment: *airflow-common-env
+    volumes: *airflow-common-volumes
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+      airflow-db:
+        condition: service_healthy
+      project-db:
+        condition: service_healthy
+    restart: always
+
+  airflow-init:
+    build:
+      context: .
+      dockerfile: airflow.Dockerfile
+    container_name: project-airflow-init
+    entrypoint: /bin/bash
+    user: "0:0"
+    command:
+      - -c
+      - |
+        set -e
+        mkdir -p /opt/airflow/logs /opt/airflow/dags /dbt/target
+        chown -R 50000:0 /opt/airflow/logs /opt/airflow/dags /dbt/target
+        exec runuser -u airflow -- bash -euc "
+          airflow db migrate
+          airflow users create \
+            --username ${AIRFLOW_ADMIN_USER} \
+            --password ${AIRFLOW_ADMIN_PASSWORD} \
+            --firstname Admin --lastname User \
+            --role Admin --email ${AIRFLOW_ADMIN_EMAIL} || true
+          airflow connections delete project_db 2>/dev/null || true
+          airflow connections add project_db \
+            --conn-type postgres \
+            --conn-host project-db \
+            --conn-port 5432 \
+            --conn-schema ${PROJECT_DB_NAME} \
+            --conn-login ${PROJECT_DB_USER} \
+            --conn-password ${PROJECT_DB_PASSWORD}
+        "
+    environment: *airflow-common-env
+    volumes: *airflow-common-volumes
+    depends_on:
+      airflow-db:
+        condition: service_healthy
+      project-db:
+        condition: service_healthy
+    restart: "no"
+
+  # ---------------------------------------------------------------------------
+  # pgAdmin — browse project-db and airflow-db in one UI
+  # ---------------------------------------------------------------------------
+  pgadmin:
+    container_name: project-pgadmin
+    image: elestio/pgadmin:${PGADMIN_VERSION:-REL-8_10}
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      CSRF_ENABLED: "False"
+    ports:
+      - "${PGADMIN_PORT:-5051}:80"
+    depends_on:
+      - project-db
+      - airflow-db
