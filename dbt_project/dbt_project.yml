@@ -1,0 +1,19 @@
+name: project_dbt
+version: "1.0.0"
+profile: project_dbt         # must match the top key in profiles.yml
+
+#model-paths: ["models"]
+seed-paths: ["seeds"]
+#snapshot-paths: ["snapshots"]
+#test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target"]
+
+models:
+  project_dbt:
+    +materialized: table
+
+seeds:
+  project_dbt:
+    +schema: raw             # seeds land in the "raw" schema so they are
+                             # clearly separate from the modeled tables
