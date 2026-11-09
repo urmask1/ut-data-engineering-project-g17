@@ -32,7 +32,7 @@ found in `dbt_project/seeds/` folder.
 ## How to run
 You run the project by issuing following commands:
 ```
-cp. env_template .env   # copy environment defaults (edit as needed)
+cp .env_template .env   # copy environment defaults (edit as needed)
 docker compose build    # build needed images
 docker compose up -d    # start all services in the background
 ```
