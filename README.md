@@ -91,7 +91,13 @@ and raw_sectors, respectively) in public_raw schema using dbt
 * `ingest_raw_emta_data.py` - queries EMTA open data site to query relevant CSV files 
 and turns the data into raw_emta_data table in public_raw schema
   * Configured schedule to run once per day (at 00:00)
-* `ingest_raw_procurement_data.py` - TO-DO (query data from procurement registry)
+* `ingest_raw_procurement_contracts.py` (DAG id `ingest_raw_procurements_contract_data`) - queries
+monthly contract award notices (XML) from the procurement registry's open data API starting from 2023-06
+and upserts them into raw_procurements_data table in public_raw schema, one row per contract per winning company
+  * Configured schedule to run once per day (at 00:00)
+  * If the table was created with an older structure, recreate it before running the DAG:
+    `docker compose exec project-db psql -c "DROP TABLE public_raw.raw_procurements_data;"` and then
+    `docker compose exec -T project-db psql < scripts/create_tables.sql`
 
 ## dbt
 
