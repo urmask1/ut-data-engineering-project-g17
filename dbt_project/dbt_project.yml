@@ -9,9 +9,22 @@ seed-paths: ["seeds"]
 target-path: "target"
 clean-targets: ["target"]
 
+vars:
+  date_spine_start: "2015-01-01"
+  date_spine_end: "2031-01-01"
+
 models:
   project_dbt:
-    +materialized: table
+    #+materialized: table
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: dwh
 
 seeds:
   project_dbt:

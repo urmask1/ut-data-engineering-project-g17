@@ -1,0 +1,41 @@
+version: 2
+
+sources:
+  - name: raw
+    description: "Toorandmed, mis on laaditud skeemi public_raw."
+    schema: public_raw
+    tables:
+      - name: raw_companies
+        description: "Äriregistri ettevõtted. company_id asemel (1 duplikaat) kasutatakse võtmetmena registration_code'i"
+        columns:
+          - name: registration_code
+            tests: [unique, not_null]
+
+      - name: raw_emta_data
+        description: "EMTA kvartaliandmed. field_of_activity = EMTAK"
+        columns:
+          - name: id
+            tests: [unique, not_null]
+          - name: company_registration_code
+            tests: [not_null]
+          - name: quarter
+            tests:
+              - accepted_values:
+                  values: [1, 2, 3, 4]
+                  quote: false
+
+      - name: raw_procurements_data
+        description: "RHR hankelepingud, üks võitja lepingu kohta."
+        columns:
+          - name: contract_id
+            tests: [unique, not_null]
+          - name: eu_funded
+            tests:
+              - accepted_values:
+                  values: ['eu-funds', 'no-eu-funds']
+
+      - name: raw_sectors
+        description: "Detailsed EMTAK koodid (1297 valdkonda)."
+        columns:
+          - name: sector_code
+            tests: [unique, not_null]

@@ -1,0 +1,88 @@
+version: 2
+
+models:
+  - name: dim_date
+    columns:
+      - name: date_id
+        tests: [unique, not_null]
+
+  - name: dim_sector
+    columns:
+      - name: sector_id
+        tests: [unique, not_null]
+
+  - name: dim_field
+    columns:
+      - name: field_id
+        tests: [unique, not_null]
+
+  - name: dim_company
+    description: "sektori (EMTAK jagu) järgi; valdkond, nimi ja registreerimiskuupäev."
+    tests:
+      # ühe ettevõtte versioonid ei tohi ajas kattuda
+      - dbt_utils.mutually_exclusive_ranges:
+          lower_bound_column: valid_from
+          upper_bound_column: valid_to
+          partition_by: registration_code
+          gaps: allowed
+    columns:
+      - name: company_id
+        tests: [unique, not_null]
+      - name: sector_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_sector')
+              field: sector_id
+      - name: field_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_field')
+              field: field_id
+
+  - name: dim_procurement
+    columns:
+      - name: procurement_id
+        tests: [unique, not_null]
+      - name: eu_funded
+        tests: [not_null]
+
+  - name: fact_company
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [company_id, date_id]
+    columns:
+      - name: company_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_company')
+              field: company_id
+      - name: date_id
+        tests:
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+
+  - name: fact_procurement
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [company_id, procurement_id]
+    columns:
+      - name: company_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_company')
+              field: company_id
+      - name: date_id
+        tests:
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+      - name: procurement_id
+        tests:
+          - relationships:
+              to: ref('dim_procurement')
+              field: procurement_id

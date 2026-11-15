@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: stg_sectors
+    columns:
+      - name: field_code
+        tests: [unique, not_null]
+
+  - name: stg_companies
+    columns:
+      - name: registration_code
+        tests: [unique, not_null]
+      - name: sector_code
+        description: "Detailne EMTAK kood (valdkond), ainult praegune väärtus"
+        tests:
+          - relationships:
+              to: ref('stg_sectors')
+              field: field_code
+              config:
+                severity: warn
+
+  - name: stg_emta
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns: [registration_code, year, quarter]
+    columns:
+      - name: registration_code
+        tests: [not_null]
+      - name: sector_name
+        tests: [not_null]
+
+  - name: stg_procurements
+    columns:
+      - name: contract_id
+        tests: [unique, not_null]
+      - name: registration_code
+        tests: [not_null]
+      - name: eu_funded
+        tests: [not_null]

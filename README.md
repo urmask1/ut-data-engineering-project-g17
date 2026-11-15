@@ -94,4 +94,14 @@ and turns the data into raw_emta_data table in public_raw schema
 * `ingest_raw_procurement_data.py` - TO-DO (query data from procurement registry)
 
 ## dbt
-To-be continued...
+
+Dbt needs a package so first step we need to download it to dbt docker. One time task
+ 1) docker exec -it dbt bash - avab dbt bashi akna. 
+ 2) dbt deps - laeb alla package
+
+# Following should move to Airflow tasks
+In dbt folder run 
+ 1) docker compose exec dbt dbt run --selector staging_models
+ 2) docker compose exec dbt dbt run --selector intermediate_models
+ 3) docker compose exec dbt dbt run --selector mart_models
+ 4) docker compose exec dbt dbt test
