@@ -57,10 +57,10 @@ need to remove following folders that were created as part of the
 startup process:
 ```
 logs/                   # created by airflow-webserver
-pgdata_airflow/         # created by airflow-db
-pgdata_project/         # created by project-db (postgreSQL)
-dbt/project/target/     # created by dbt
-dbt/project/logs/       # created by dbt
+pgdata_airflow/         # created by airflow-db (remove if you want clean airflow-db)
+pgdata_project/         # created by project-db (postgreSQL) (remove if you want clean project-db)
+dbt_project/target/     # created by dbt
+dbt_project/logs/       # created by dbt
 ```
 
 ## Access

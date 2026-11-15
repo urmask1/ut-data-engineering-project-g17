@@ -17,3 +17,18 @@ seeds:
   project_dbt:
     +schema: raw             # seeds land in the "raw" schema so they are
                              # clearly separate from the modeled tables
+    raw_companies:
+      +column_types:
+        company_id: varchar(100)
+        company_name: text
+        registration_code: integer
+        registration_date: text
+        sector_code: varchar(100)
+        valid_from: text
+        valid_to: text
+        is_current: integer
+
+    raw_sectors:
+      +column_types:
+        sector_code: varchar(100)
+        sector_name: text
