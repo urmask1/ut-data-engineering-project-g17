@@ -33,6 +33,9 @@ services:
       context: .
       dockerfile: dbt.Dockerfile
     container_name: dbt
+    # Same user as Airflow, otherwise files that dbt writes here (target/, logs/) are owned by root
+    # and Airflow's dbt tasks fail with "Permission denied"
+    user: "50000:0"
     volumes:
       - ./dbt_project:/dbt
     environment:
@@ -135,8 +138,8 @@ services:
       - -c
       - |
         set -e
-        mkdir -p /opt/airflow/logs /opt/airflow/dags /dbt/target
-        chown -R 50000:0 /opt/airflow/logs /opt/airflow/dags /dbt/target
+        mkdir -p /opt/airflow/logs /opt/airflow/dags /dbt/target /dbt/logs /dbt/dbt_packages
+        chown -R 50000:0 /opt/airflow/logs /opt/airflow/dags /dbt/target /dbt/logs /dbt/dbt_packages
         exec runuser -u airflow -- bash -euc "
           airflow db migrate
           airflow users create \

@@ -10,7 +10,7 @@ target-path: "target"
 clean-targets: ["target"]
 
 vars:
-  date_spine_start: "2015-01-01"
+  date_spine_start: "2000-01-01"  # vanim hankeleping on aastast 2003
   date_spine_end: "2031-01-01"
 
 models:
