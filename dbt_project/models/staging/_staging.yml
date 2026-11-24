@@ -30,10 +30,19 @@ models:
         tests: [not_null]
 
   - name: stg_procurements
+    description: "Üks rida lepingu ja Eesti võitja kohta. Välismaised võitjad ja füüsilised isikud on välja filtreeritud."
     columns:
-      - name: contract_id
+      - name: record_id
         tests: [unique, not_null]
+      - name: procurement_contract_id
+        description: "notice_id/contract_id"
+        tests: [not_null]
+      - name: awarded_contract_amount
+        description: "Võitja osa lepingu summast: kogusumma jagatud kõigi võitjate arvuga."
       - name: registration_code
         tests: [not_null]
       - name: eu_funded
-        tests: [not_null]
+        tests:
+          - not_null:
+              config:
+                severity: warn # NULL on lubatud (märge puudub teates), aga praegu ei tohiks neid olla

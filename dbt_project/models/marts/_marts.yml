@@ -42,11 +42,18 @@ models:
               field: field_id
 
   - name: dim_procurement
+    description: "Üks rida hankelepingu kohta."
     columns:
       - name: procurement_id
+        description: "notice_id/contract_id"
         tests: [unique, not_null]
       - name: eu_funded
-        tests: [not_null]
+        tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: is_framework_agreement
+        description: "true = raamleping (summa on ülempiir, mitte tegelik kulu), NULL = tunnus puudub."
 
   - name: fact_company
     tests:
@@ -66,10 +73,15 @@ models:
               field: date_id
 
   - name: fact_procurement
+    description: "Üks rida ettevõtte ja hankelepingu kohta. Ainult Eesti võitjad."
     tests:
       - dbt_utils.unique_combination_of_columns:
           combination_of_columns: [company_id, procurement_id]
+          config:
+            where: "company_id <> '-1'" # ühel lepingul võib olla mitu tundmatut ettevõtet
     columns:
+      - name: record_id
+        tests: [unique, not_null]
       - name: company_id
         tests:
           - not_null

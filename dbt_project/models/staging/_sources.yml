@@ -25,10 +25,28 @@ sources:
                   quote: false
 
       - name: raw_procurements_data
-        description: "RHR hankelepingud, üks võitja lepingu kohta."
+        description: "RHR hankelepingud, üks rida lepingu ja võitja kohta (ühispakkumisel mitu rida)."
         columns:
-          - name: contract_id
+          - name: record_id
+            description: "notice_id/contract_id/võitja viide"
             tests: [unique, not_null]
+          - name: notice_id
+            tests: [not_null]
+          - name: contract_id
+            description: "Lepingu tunnus teate sees, nt CON-0001. Unikaalne ainult koos notice_id-ga."
+            tests: [not_null]
+          - name: company_registration_code
+            description: "Võitja registrikood. Tekst, sest välismaistel võitjatel pole kood alati number."
+          - name: contract_award_amount
+            description: "Terve lepingu summa (pole võitjate vahel jagatud). NULL = avaldamata."
+          - name: winners_in_contract
+            description: "Lepingu võitjate arv, >1 on ühispakkumine."
+            tests: [not_null]
+          - name: framework_agreement
+            description: "none = tavaleping, muu = raamleping, mille summa on ülempiir. NULL = tunnus puudub."
+            tests:
+              - accepted_values:
+                  values: ['none', 'fa-wo-rc', 'fa-w-rc', 'fa-mix']
           - name: eu_funded
             tests:
               - accepted_values:

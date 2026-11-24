@@ -95,9 +95,10 @@ and turns the data into raw_emta_data table in public_raw schema
 monthly contract award notices (XML) from the procurement registry's open data API starting from 2023-06
 and upserts them into raw_procurements_data table in public_raw schema, one row per contract per winning company
   * Configured schedule to run once per day (at 00:00)
-  * If the table was created with an older structure, recreate it before running the DAG:
-    `docker compose exec project-db psql -c "DROP TABLE public_raw.raw_procurements_data;"` and then
-    `docker compose exec -T project-db psql < scripts/create_tables.sql`
+  * If the table was created with an older structure, recreate it before running the DAG
+    (`CASCADE` also drops the dbt staging view built on it, `dbt run` creates the view again):
+    1) `docker compose exec project-db psql -c "DROP TABLE IF EXISTS public_raw.raw_procurements_data CASCADE;"`
+    2) `docker compose exec project-db psql -f /docker-entrypoint-initdb.d/01_create_tables.sql`
 
 ## dbt
 
